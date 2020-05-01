@@ -38,7 +38,7 @@ int main(int argc, const char *argv[]) {
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer(dataBufferSize); // list of data frames which are held in memory at the same time
     int pos_in_buffer = -1; // Position in the circular buffer
-    bool bVis = false;            // visualize results
+    bool bVis = true;            // visualize results
 
     /* MAIN LOOP OVER ALL IMAGES */
 
@@ -62,7 +62,7 @@ int main(int argc, const char *argv[]) {
         DataFrame frame;
         frame.cameraImg = imgGray;
         pos_in_buffer = (pos_in_buffer + 1) % dataBufferSize;
-        auto prev_pos_in_buffer = (pos_in_buffer-1) % dataBufferSize;
+        auto prev_pos_in_buffer = std::abs((pos_in_buffer-1)) % dataBufferSize;
         dataBuffer[pos_in_buffer] = frame;
 
         //// EOF STUDENT ASSIGNMENT
@@ -72,14 +72,16 @@ int main(int argc, const char *argv[]) {
 
         // extract 2D keypoints from current image
         vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        string detectorType = "SHITOMASI";
+        enum DetectorType { shitomasi, harris, fast, brisk, orb, akaze, sift};
+        // string detectorType = "SHITOMASI";
+        DetectorType detectorType {shitomasi};
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
         //// -> HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
 
-        if (detectorType.compare("SHITOMASI") == 0) {
-            detKeypointsShiTomasi(keypoints, imgGray, false);
+        if (detectorType== shitomasi) {
+            detKeypointsShiTomasi(keypoints, imgGray, false );
         } else {
             //...
         }
@@ -98,12 +100,11 @@ int main(int argc, const char *argv[]) {
         //// EOF STUDENT ASSIGNMENT
 
         // optional : limit number of keypoints (helpful for debugging and learning)
-        bool bLimitKpts = false;
+        bool bLimitKpts = true;
         if (bLimitKpts) {
             int maxKeypoints = 50;
 
-            if (detectorType.compare("SHITOMASI") ==
-                0) { // there is no response info, so keep the first 50 as they are sorted in descending quality order
+            if (detectorType==shitomasi) { // there is no response info, so keep the first 50 as they are sorted in descending quality order
                 keypoints.erase(keypoints.begin() + maxKeypoints, keypoints.end());
             }
             cv::KeyPointsFilter::retainBest(keypoints, maxKeypoints);
