@@ -72,36 +72,36 @@ int main(int argc, const char *argv[]) {
 
         // extract 2D keypoints from current image
         vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        enum DetectorType {
+        enum struct DetectorType {
             shitomasi, harris, fast, brisk, orb, akaze, sift
         };
         // string detectorType = "SHITOMASI";
-        DetectorType detectorType{sift};
+        DetectorType detectorType{DetectorType::sift};
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
         //// -> HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
 
         switch (detectorType) {
-            case shitomasi:
+            case DetectorType::shitomasi:
                 detGoodFeaturesToTrack(keypoints, imgGray, false);
                 break;
-            case harris:
+            case DetectorType::harris:
                 detKeypointsHarris(keypoints, imgGray, false);
                 break;
-            case fast:
+            case DetectorType::fast:
                 detKeypointsModern(keypoints, img, "FAST", false);
                 break;
-            case brisk:
+            case DetectorType::brisk:
                 detKeypointsModern(keypoints, img, "BRISK", false);
                 break;
-            case orb:
+            case DetectorType::orb:
                 detKeypointsModern(keypoints, img, "ORB", false);
                 break;
-            case akaze:
+            case DetectorType::akaze:
                 detKeypointsModern(keypoints, img, "AKAZE", false);
                 break;
-            case sift:
+            case DetectorType::sift:
                 detKeypointsModern(keypoints, img, "SIFT", false);
                 break;
         }
@@ -115,7 +115,13 @@ int main(int argc, const char *argv[]) {
         bool bFocusOnVehicle = true;
         cv::Rect vehicleRect(535, 180, 180, 150);
         if (bFocusOnVehicle) {
-            // ...
+            vector<cv::KeyPoint> cropped_keypoints;
+            for (const auto &keypoint: keypoints)
+                if (keypoint.pt.x >= vehicleRect.x && keypoint.pt.y >= vehicleRect.y &&
+                    keypoint.pt.x < vehicleRect.x + vehicleRect.width &&
+                    keypoint.pt.y < vehicleRect.y + vehicleRect.height)
+                    cropped_keypoints.emplace_back(keypoint);
+            keypoints = cropped_keypoints;
         }
 
         //// EOF STUDENT ASSIGNMENT
@@ -125,9 +131,8 @@ int main(int argc, const char *argv[]) {
         if (bLimitKpts) {
             int maxKeypoints = 50;
 
-            if (detectorType ==
-                shitomasi || detectorType ==
-                             harris) { // there is no response info, so keep the first 50 as they are sorted in descending quality order
+            if (detectorType == DetectorType::shitomasi || detectorType ==
+                                                           DetectorType::harris) { // there is no response info, so keep the first 50 as they are sorted in descending quality order
                 keypoints.erase(keypoints.begin() + maxKeypoints, keypoints.end());
             }
             cv::KeyPointsFilter::retainBest(keypoints, maxKeypoints);
@@ -144,10 +149,18 @@ int main(int argc, const char *argv[]) {
         //// TASK MP.4 -> add the following descriptors in file matching2D.cpp and enable string-based selection based on descriptorType
         //// -> BRIEF, ORB, FREAK, AKAZE, SIFT
 
+        enum struct DescriptorType {
+            brisk, brief, orb, freak, akaze, sift
+        };
+        vector<string> descriptorTypesAsString = {"BRISK", "BRIEF", "ORB", "FREAK", "AKAZE", "SIFT"};
+
         cv::Mat descriptors;
-        string descriptorType = "BRISK"; // BRIEF, ORB, FREAK, AKAZE, SIFT
-        descKeypoints(dataBuffer[pos_in_buffer].keypoints, dataBuffer[pos_in_buffer].cameraImg, descriptors,
-                      descriptorType);
+        DescriptorType descriptorType{DescriptorType::brief};
+        // string descriptorType = "BRISK"; // BRIEF, ORB, FREAK, AKAZE, SIFT
+        descKeypoints(dataBuffer[pos_in_buffer].keypoints,
+                      dataBuffer[pos_in_buffer].cameraImg,
+                      descriptors,
+                      descriptorTypesAsString[static_cast<int>(descriptorType)]);
         //// EOF STUDENT ASSIGNMENT
 
         // push descriptors for current frame to end of data buffer
