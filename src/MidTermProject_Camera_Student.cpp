@@ -62,7 +62,7 @@ int main(int argc, const char *argv[]) {
         DataFrame frame;
         frame.cameraImg = imgGray;
         pos_in_buffer = (pos_in_buffer + 1) % dataBufferSize;
-        auto prev_pos_in_buffer = std::abs((pos_in_buffer-1)) % dataBufferSize;
+        auto prev_pos_in_buffer = std::abs((pos_in_buffer - 1)) % dataBufferSize;
         dataBuffer[pos_in_buffer] = frame;
 
         //// EOF STUDENT ASSIGNMENT
@@ -72,19 +72,40 @@ int main(int argc, const char *argv[]) {
 
         // extract 2D keypoints from current image
         vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        enum DetectorType { shitomasi, harris, fast, brisk, orb, akaze, sift};
+        enum DetectorType {
+            shitomasi, harris, fast, brisk, orb, akaze, sift
+        };
         // string detectorType = "SHITOMASI";
-        DetectorType detectorType {shitomasi};
+        DetectorType detectorType{sift};
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
         //// -> HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
 
-        if (detectorType== shitomasi) {
-            detKeypointsShiTomasi(keypoints, imgGray, false );
-        } else {
-            //...
+        switch (detectorType) {
+            case shitomasi:
+                detGoodFeaturesToTrack(keypoints, imgGray, false);
+                break;
+            case harris:
+                detKeypointsHarris(keypoints, imgGray, false);
+                break;
+            case fast:
+                detKeypointsModern(keypoints, img, "FAST", false);
+                break;
+            case brisk:
+                detKeypointsModern(keypoints, img, "BRISK", false);
+                break;
+            case orb:
+                detKeypointsModern(keypoints, img, "ORB", false);
+                break;
+            case akaze:
+                detKeypointsModern(keypoints, img, "AKAZE", false);
+                break;
+            case sift:
+                detKeypointsModern(keypoints, img, "SIFT", false);
+                break;
         }
+
         //// EOF STUDENT ASSIGNMENT
 
         //// STUDENT ASSIGNMENT
@@ -104,7 +125,9 @@ int main(int argc, const char *argv[]) {
         if (bLimitKpts) {
             int maxKeypoints = 50;
 
-            if (detectorType==shitomasi) { // there is no response info, so keep the first 50 as they are sorted in descending quality order
+            if (detectorType ==
+                shitomasi || detectorType ==
+                             harris) { // there is no response info, so keep the first 50 as they are sorted in descending quality order
                 keypoints.erase(keypoints.begin() + maxKeypoints, keypoints.end());
             }
             cv::KeyPointsFilter::retainBest(keypoints, maxKeypoints);
