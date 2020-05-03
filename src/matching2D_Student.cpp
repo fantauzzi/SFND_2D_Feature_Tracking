@@ -160,8 +160,6 @@ void detKeypointsModern(vector<cv::KeyPoint> &keypoints, cv::Mat &img, string de
 
     cv::Ptr<cv::Feature2D> detector;
 
-    // TODO: twiddle parameters
-
     if (detectorType == "FAST")
         detector = cv::FastFeatureDetector::create(10, true);
     else if (detectorType == "BRISK")

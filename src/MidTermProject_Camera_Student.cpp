@@ -5,6 +5,8 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+#include <numeric>
+#include <algorithm>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -154,6 +156,20 @@ int main(int argc, const char *argv[]) {
                     cout << " NOTE: Keypoints have been limited!" << endl;
                 }
 
+                // Compute average and sample variance of the keypoints neighborhood size
+                double sum = 0;
+                for_each(keypoints.begin(), keypoints.end(), [&sum](cv::KeyPoint kp) { sum += kp.size; });
+                double avg = sum/keypoints.size();
+
+                double sq_dev=0;
+                for_each(keypoints.begin(), keypoints.end(), [avg, &sq_dev](cv::KeyPoint kp) {
+                    auto dev = kp.size - avg;
+                    sq_dev+= dev * dev;
+                });
+                double sample_var = sq_dev / (keypoints.size() - 1.);
+
+                cout << "Average = " << avg << " Sample std dev. = " << std::sqrt(sample_var) << endl;
+
                 // Store keypoints for current frame in the data buffer
                 dataBuffer[pos_in_buffer].keypoints = keypoints;
                 cout << "#2 : DETECT KEYPOINTS done" << endl;
@@ -172,9 +188,11 @@ int main(int argc, const char *argv[]) {
                               dataBuffer[pos_in_buffer].cameraImg,
                               descriptors,
                               descriptorType);
+
+
                 //// EOF STUDENT ASSIGNMENT
 
-                // push descriptors for current frame to end of data buffer
+                // store descriptors for current frame to end of data buffer
                 dataBuffer[pos_in_buffer].descriptors = descriptors;
 
                 cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
