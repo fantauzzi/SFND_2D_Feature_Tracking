@@ -141,7 +141,7 @@ void detGoodFeaturesToTrackHelper(vector<cv::KeyPoint> &keypoints,
         string windowName = useHarrisDetector ? "Harris Corner Detector Results" : "Shi-Tomasi Corner Detector Results";
         cv::namedWindow(windowName, 6);
         imshow(windowName, visImage);
-        cv::waitKey(0);
+        // cv::waitKey(0);
     }
 }
 
@@ -187,6 +187,6 @@ void detKeypointsModern(vector<cv::KeyPoint> &keypoints, cv::Mat &img, string de
         string windowName = detectorType + " corner Detector Results";
         cv::namedWindow(windowName, 6);
         imshow(windowName, visImage);
-        cv::waitKey(0);
+        // cv::waitKey(0);
     }
 }

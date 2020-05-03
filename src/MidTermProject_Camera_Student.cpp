@@ -46,10 +46,10 @@ int main(int argc, const char *argv[]) {
 
     // Loop over all detectors
     vector<string> detectorTypes{"SHITOMASI", "HARRIS", "FAST", "BRISK", "ORB", "AKAZE", "SIFT"};
-    for (auto const & detectorType: detectorTypes) {
+    for (auto const &detectorType: detectorTypes) {
         // Loop over all descriptors
         vector<string> descriptorTypes = {"BRISK", "BRIEF", "ORB", "FREAK", "AKAZE", "SIFT"};
-        for (auto const & descriptorType: descriptorTypes) {
+        for (auto const &descriptorType: descriptorTypes) {
 
             // The Akaze detector only works with the Akaze descriptor
             if (detectorType == "AKAZE" && descriptorType != "AKAZE")
@@ -211,11 +211,12 @@ int main(int argc, const char *argv[]) {
                                         cv::Scalar::all(-1), cv::Scalar::all(-1),
                                         vector<char>(), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-                        string windowName = "Matching keypoints between two camera images";
+                        string windowName =
+                                "Matching keypoints with " + detectorType + " " + descriptorType + " " + matcherType;
                         cv::namedWindow(windowName, 7);
                         cv::imshow(windowName, matchImg);
                         cout << "Press key to continue to next image" << endl;
-                        cv::waitKey(0); // wait for key to be pressed
+                        // cv::waitKey(0); // wait for key to be pressed
                     }
                 } // Keypoints matching
             } // Loop over images
