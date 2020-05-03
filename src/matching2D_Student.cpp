@@ -17,29 +17,32 @@ void matchDescriptors(vector<cv::KeyPoint> &kPtsSource,
         cerr << "unknown descriptor type: " << descriptorType;
         exit(1);
     }
-    bool crossCheck = false;
     cv::Ptr<cv::DescriptorMatcher> matcher;
 
     if (matcherType == "MAT_BF") {
         // Configure a matcher for Brute-force matching
+        bool crossCheck = false;
         int normType = descriptorType == "DES_HOG" ? cv::NORM_L2
                                                    : cv::NORM_HAMMING;
         matcher = cv::BFMatcher::create(normType, crossCheck);
     } else if (matcherType == "MAT_FLANN") {
         // Configure a matcher for FLANN matching
-        // TODO is the bug still there since OpenCV 4.1? Check. Workaround implemented below
+        // Workaround for bug in FLANN matcher, still present in OpenCV 4.3
         if (descSource.type() != CV_32F)
             descSource.convertTo(descSource, CV_32F);
         if (descRef.type() != CV_32F)
-            descRef.convertTo(descSource, CV_32F);
+            descRef.convertTo(descRef, CV_32F);
         // Taken from OpenCV examples. TODO could I use cv::FlannBasedMatcher instead?
         matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
+    } else {
+        cerr << "Unsupported matcher type: " << matcherType;
+        exit(-1);
     }
 
     // Do the matching
     if (selectorType == "SEL_NN") {
         // Do it with nearest neighbor
-        matcher->match(descSource, descRef, matches); // Finds the best match for each descriptor in desc1
+        matcher->match(descSource, descRef, matches);
     } else if (selectorType == "SEL_KNN") {
         // Do it with k nearest neighbors (k=2)
         vector<vector<cv::DMatch> > knn_matches;
@@ -52,7 +55,7 @@ void matchDescriptors(vector<cv::KeyPoint> &kPtsSource,
             }
         }
     } else {
-        cout << "Unknown selector type: " << selectorType << endl;
+        cerr << "Unsupported selector type: " << selectorType << endl;
         exit(-1);
     }
 
@@ -80,18 +83,19 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
     } else if (descriptorType == "SIFT") {
         extractor = cv::xfeatures2d::SIFT::create();;
     } else {
-        cout << "Unsupported descriptor: " << descriptorType << endl;
+        cerr << "Unsupported descriptor: " << descriptorType << endl;
         exit(-1);
     }
     // perform feature description
     double t = (double) cv::getTickCount();
     extractor->compute(img, keypoints, descriptors);
     t = ((double) cv::getTickCount() - t) / cv::getTickFrequency();
-    cout << descriptorType << " descriptor extraction in " << 1000 * t / 1.0 << " ms" << endl;
+    cout << "  " << descriptorType << " descriptor extraction in " << 1000 * t / 1.0 << " ms" << endl;
 }
 
 
-void detGoodFeaturesToTrackHelper(vector<cv::KeyPoint> &keypoints, cv::Mat &img,
+void detGoodFeaturesToTrackHelper(vector<cv::KeyPoint> &keypoints,
+                                  cv::Mat &img,
                                   bool useHarrisDetector = false,
                                   bool bVis = false) {
     // compute detector parameters based on image size
@@ -124,8 +128,11 @@ void detGoodFeaturesToTrackHelper(vector<cv::KeyPoint> &keypoints, cv::Mat &img,
         newKeyPoint.size = static_cast<float>(blockSize);
         keypoints.push_back(newKeyPoint);
     }
+
+    const string which_detection = useHarrisDetector ? "HARRIS" : "SHITOMASI";
     t = (static_cast<double >(cv::getTickCount()) - t) / cv::getTickFrequency();
-    cout << "Shi-Tomasi detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
+    cout << " " << which_detection << " with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms"
+         << endl;
 
     // visualize results
     if (bVis) {
@@ -169,7 +176,8 @@ void detKeypointsModern(vector<cv::KeyPoint> &keypoints, cv::Mat &img, string de
     detector->detect(img, keypoints);
 
     t = ((double) cv::getTickCount() - t) / cv::getTickFrequency();
-    cout << detectorType << " detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms"
+    cout << " " << detectorType << " detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0
+         << " ms"
          << endl;
 
 // visualize results
