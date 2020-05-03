@@ -21,7 +21,9 @@ using namespace std;
 /* MAIN PROGRAM */
 int main(int argc, const char *argv[]) {
 
+    /**************************************/
     /* INIT VARIABLES AND DATA STRUCTURES */
+    /**************************************/
 
     // data location
     string dataPath = "../";
@@ -36,11 +38,13 @@ int main(int argc, const char *argv[]) {
 
     // misc
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
-    vector<DataFrame> dataBuffer(dataBufferSize); // list of data frames which are held in memory at the same time
-    int pos_in_buffer = -1; // Position in the circular buffer
+    vector<DataFrame> dataBuffer(dataBufferSize); // sequence of data frames which are held in memory at the same time
+    int pos_in_buffer = -1; // Position in the circular buffer, will be increased to 0 at the first iteration
     bool bVis = true;            // visualize results
 
+    /*****************************/
     /* MAIN LOOP OVER ALL IMAGES */
+    /*****************************/
 
     for (size_t imgIndex = 0; imgIndex <= imgEndIndex - imgStartIndex; imgIndex++) {
         /* LOAD IMAGE INTO BUFFER */
@@ -58,10 +62,10 @@ int main(int argc, const char *argv[]) {
         //// STUDENT ASSIGNMENT
         //// TASK MP.1 -> replace the following code with ring buffer of size dataBufferSize
 
-        // push image into data frame buffer
         DataFrame frame;
         frame.cameraImg = imgGray;
         pos_in_buffer = (pos_in_buffer + 1) % dataBufferSize;
+        // Beware, remainder of division can be negative in C++
         auto prev_pos_in_buffer = std::abs((pos_in_buffer - 1)) % dataBufferSize;
         dataBuffer[pos_in_buffer] = frame;
 
@@ -75,8 +79,7 @@ int main(int argc, const char *argv[]) {
         enum struct DetectorType {
             shitomasi, harris, fast, brisk, orb, akaze, sift
         };
-        // string detectorType = "SHITOMASI";
-        DetectorType detectorType{DetectorType::sift};
+        DetectorType detectorType{DetectorType::akaze}; // <==============================
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
@@ -84,7 +87,7 @@ int main(int argc, const char *argv[]) {
 
         switch (detectorType) {
             case DetectorType::shitomasi:
-                detGoodFeaturesToTrack(keypoints, imgGray, false);
+                detGoodFeaturesToTrack(keypoints, imgGray, true);
                 break;
             case DetectorType::harris:
                 detKeypointsHarris(keypoints, imgGray, false);
@@ -99,7 +102,7 @@ int main(int argc, const char *argv[]) {
                 detKeypointsModern(keypoints, img, "ORB", false);
                 break;
             case DetectorType::akaze:
-                detKeypointsModern(keypoints, img, "AKAZE", false);
+                detKeypointsModern(keypoints, img, "AKAZE", true);
                 break;
             case DetectorType::sift:
                 detKeypointsModern(keypoints, img, "SIFT", false);
@@ -139,7 +142,7 @@ int main(int argc, const char *argv[]) {
             cout << " NOTE: Keypoints have been limited!" << endl;
         }
 
-        // push keypoints and descriptor for current frame to end of data buffer
+        // push keypoints and descriptor for current frame in the data buffer
         dataBuffer[pos_in_buffer].keypoints = keypoints;
         cout << "#2 : DETECT KEYPOINTS done" << endl;
 
@@ -153,9 +156,9 @@ int main(int argc, const char *argv[]) {
             brisk, brief, orb, freak, akaze, sift
         };
         vector<string> descriptorTypesAsString = {"BRISK", "BRIEF", "ORB", "FREAK", "AKAZE", "SIFT"};
-
         cv::Mat descriptors;
-        DescriptorType descriptorType{DescriptorType::brief};
+        DescriptorType descriptorType{DescriptorType::akaze}; // <==============================
+
         // string descriptorType = "BRISK"; // BRIEF, ORB, FREAK, AKAZE, SIFT
         descKeypoints(dataBuffer[pos_in_buffer].keypoints,
                       dataBuffer[pos_in_buffer].cameraImg,
@@ -175,7 +178,8 @@ int main(int argc, const char *argv[]) {
 
             vector<cv::DMatch> matches;
             string matcherType = "MAT_BF";        // MAT_BF, MAT_FLANN
-            string descriptorType = "DES_BINARY"; // DES_BINARY, DES_HOG
+            string descriptorTypeString =
+                    descriptorType == DescriptorType::sift ? "DES_HOG" : "DES_BINARY"; // DES_BINARY, DES_HOG
             string selectorType = "SEL_NN";       // SEL_NN, SEL_KNN
 
             //// STUDENT ASSIGNMENT
@@ -184,7 +188,7 @@ int main(int argc, const char *argv[]) {
 
             matchDescriptors(dataBuffer[prev_pos_in_buffer].keypoints, dataBuffer[pos_in_buffer].keypoints,
                              dataBuffer[prev_pos_in_buffer].descriptors, dataBuffer[pos_in_buffer].descriptors,
-                             matches, descriptorType, matcherType, selectorType);
+                             matches, descriptorTypeString, matcherType, selectorType);
 
             //// EOF STUDENT ASSIGNMENT
 
