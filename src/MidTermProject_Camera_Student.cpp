@@ -76,37 +76,30 @@ int main(int argc, const char *argv[]) {
 
         // extract 2D keypoints from current image
         vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        enum struct DetectorType {
-            shitomasi, harris, fast, brisk, orb, akaze, sift
-        };
-        DetectorType detectorType{DetectorType::akaze}; // <==============================
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
         //// -> HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
 
-        switch (detectorType) {
-            case DetectorType::shitomasi:
+        vector<string> detectorTypes {"SHITOMASI", "HARRIS", "FAST", "BRISK", "ORB", "AKAZE", "SIFT"};
+        string detectorType = "AKAZE";
+        if (detectorType == "SHITOMASI")
                 detGoodFeaturesToTrack(keypoints, imgGray, true);
-                break;
-            case DetectorType::harris:
+        else if (detectorType == "HARRIS")
                 detKeypointsHarris(keypoints, imgGray, false);
-                break;
-            case DetectorType::fast:
+        else if (detectorType == "FAST")
                 detKeypointsModern(keypoints, img, "FAST", false);
-                break;
-            case DetectorType::brisk:
+        else if (detectorType == "BRISK")
                 detKeypointsModern(keypoints, img, "BRISK", false);
-                break;
-            case DetectorType::orb:
+        else if (detectorType == "ORB")
                 detKeypointsModern(keypoints, img, "ORB", false);
-                break;
-            case DetectorType::akaze:
-                detKeypointsModern(keypoints, img, "AKAZE", true);
-                break;
-            case DetectorType::sift:
-                detKeypointsModern(keypoints, img, "SIFT", false);
-                break;
+        else if (detectorType == "AKAZE")
+            detKeypointsModern(keypoints, img, "AKAZE", true);
+        else if (detectorType == "SIFT")
+            detKeypointsModern(keypoints, img, "SIFT", false);
+        else {
+            cout <<"Unknown detector type: " << detectorType << endl;
+            exit(-1);
         }
 
         //// EOF STUDENT ASSIGNMENT
@@ -134,8 +127,7 @@ int main(int argc, const char *argv[]) {
         if (bLimitKpts) {
             int maxKeypoints = 50;
 
-            if (detectorType == DetectorType::shitomasi || detectorType ==
-                                                           DetectorType::harris) { // there is no response info, so keep the first 50 as they are sorted in descending quality order
+            if (detectorType == "SHITOMASI" || detectorType == "HARRIS") { // there is no response info, so keep the first 50 as they are sorted in descending quality order
                 keypoints.erase(keypoints.begin() + maxKeypoints, keypoints.end());
             }
             cv::KeyPointsFilter::retainBest(keypoints, maxKeypoints);
