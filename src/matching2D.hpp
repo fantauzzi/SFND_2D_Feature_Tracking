@@ -1,13 +1,7 @@
 #ifndef matching2D_hpp
 #define matching2D_hpp
 
-#include <stdio.h>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-#include <vector>
-#include <cmath>
-#include <limits>
+#include "dataStructures.h"
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -16,7 +10,13 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/xfeatures2d/nonfree.hpp>
 
-#include "dataStructures.h"
+#include <stdio.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <vector>
+#include <cmath>
+#include <limits>
 
 
 void detKeypointsHarris(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis=false);

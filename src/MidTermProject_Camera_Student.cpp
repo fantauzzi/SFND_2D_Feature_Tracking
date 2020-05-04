@@ -1,23 +1,20 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <vector>
-#include <cmath>
-#include <limits>
-#include <numeric>
-#include <algorithm>
-#include <map>
-#include <set>
+#include "dataStructures.h"
+#include "matching2D.hpp"
+
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
-#include <opencv2/xfeatures2d/nonfree.hpp>
 
-#include "dataStructures.h"
-#include "matching2D.hpp"
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+#include <map>
+#include <set>
+
 
 using namespace std;
 
@@ -61,7 +58,7 @@ int main(int argc, const char *argv[]) {
     int imgFillWidth = 4;  // no. of digits which make up the file index (e.g. img-0001.png)
 
     // misc
-    const char dir_separator='/';
+    const char dir_separator = '/';
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer(dataBufferSize); // sequence of data frames which are held in memory at the same time
     int pos_in_buffer = -1; // Position in the circular buffer, will be increased to 0 at the first iteration
@@ -308,19 +305,6 @@ int main(int argc, const char *argv[]) {
     } // Loop over all detector types
     // Save statistics in files
 
-    // Number of keypoints on the preceding vehicle, by image and by detector
-    //map<pair<string, string>, int> keypoints_count;
-
-    // Average and sample variance of the neighborhood size, by image and by detector
-    //map<pair<string, string>, pair<float, float>> neighborhood_size;
-
-    // Total number of matched keypoints (summed across all images), by detector type and by descriptor type
-    //map<pair<string, string>, int> matched_count;
-
-    // Total time (summed across all images) for keypoints detection plus descriptors extraction, by detector type and
-    // descriptor type. TODO measurement unit?
-    //map<pair<string, string>, float> detect_extract_time;
-
     ofstream image_detect_file(dataPath + "stats.txt");
     if (!image_detect_file.is_open()) {
         cout << "Unable to open file for writing" << endl;
@@ -328,9 +312,9 @@ int main(int argc, const char *argv[]) {
     }
 
     auto write_detectors_header = [&image_detect_file, &detectorTypes]() {
-        for (const auto &detector_name: detectorTypes) {
+        image_detect_file << "Filename ";
+        for (const auto &detector_name: detectorTypes)
             image_detect_file << detector_name << " ";
-        }
         image_detect_file << endl;
     };
 
@@ -338,9 +322,8 @@ int main(int argc, const char *argv[]) {
     write_detectors_header();
     for (const auto &file_name: allFileNames) {
         image_detect_file << file_name << " ";
-        for (const auto &detector_name: detectorTypes) {
+        for (const auto &detector_name: detectorTypes)
             image_detect_file << keypoints_count[make_pair(file_name, detector_name)] << " ";
-        }
         image_detect_file << endl;
     }
 
@@ -348,9 +331,8 @@ int main(int argc, const char *argv[]) {
     write_detectors_header();
     for (const auto &file_name: allFileNames) {
         image_detect_file << file_name << " ";
-        for (const auto &detector_name: detectorTypes) {
+        for (const auto &detector_name: detectorTypes)
             image_detect_file << neighborhood_size[make_pair(file_name, detector_name)].first << " ";
-        }
         image_detect_file << endl;
     }
 
@@ -364,6 +346,7 @@ int main(int argc, const char *argv[]) {
     }
 
     auto write_descriptors_header = [&image_detect_file, &descriptorTypes]() {
+        image_detect_file << "Descriptor=> ";
         for (const auto &descriptor_name: descriptorTypes)
             image_detect_file << descriptor_name << " ";
         image_detect_file << endl;
@@ -381,13 +364,13 @@ int main(int argc, const char *argv[]) {
     }
 
     image_detect_file
-            << "Total_time_(summed_across_all_images)_for_keypoints_detection_plus_descriptors_extraction,_by_detector_type_and_descriptor_type"
+            << "Total_time_(summed_across_all_images)_in_ms_for_keypoints_detection_plus_descriptors_extraction,_by_detector_type_and_descriptor_type"
             << endl;
     write_descriptors_header();
     for (const auto &detector_name: detectorTypes) {
         image_detect_file << detector_name << " ";
         for (const auto &descriptor_name: descriptorTypes)
-            image_detect_file << detect_extract_time[make_pair(detector_name, descriptor_name)] << " ";
+            image_detect_file << std::round(detect_extract_time[make_pair(detector_name, descriptor_name)]*1000) << " ";
         image_detect_file << endl;
     }
     return 0;

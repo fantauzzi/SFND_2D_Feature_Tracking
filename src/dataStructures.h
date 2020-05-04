@@ -1,8 +1,8 @@
 #ifndef dataStructures_h
 #define dataStructures_h
 
-#include <vector>
 #include <opencv2/core.hpp>
+#include <vector>
 
 
 struct DataFrame { // represents the available sensor information at the same time instance
