@@ -39,7 +39,6 @@ public:
 };
 
 
-/* MAIN PROGRAM */
 int main(int argc, const char *argv[]) {
 
     /**************************************/
@@ -62,12 +61,12 @@ int main(int argc, const char *argv[]) {
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer(dataBufferSize); // sequence of data frames which are held in memory at the same time
     int pos_in_buffer = -1; // Position in the circular buffer, will be increased to 0 at the first iteration
-    bool bVis = true;            // visualize results
+    bool bVis = false;            // visualize results
 
     vector<string> detectorTypes{"SHITOMASI", "HARRIS", "FAST", "BRISK", "ORB", "AKAZE", "SIFT"};
     vector<string> descriptorTypes = {"BRISK", "BRIEF", "ORB", "FREAK", "AKAZE", "SIFT"};
 
-    // ---Statistics to be collected and dumped in files
+    // ---Statistics to be collected and saved in a file
     // Number of keypoints on the preceding vehicle, by image and by detector
     map<pair<string, string>, int> keypoints_count;
     // Average and sample variance of the neighborhood size, by image and by detector
@@ -75,7 +74,7 @@ int main(int argc, const char *argv[]) {
     // Total number of matched keypoints (summed across all images), by detector type and by descriptor type
     map<pair<string, string>, int> matched_count;
     // Total time (summed across all images) for keypoints detection plus descriptors extraction, by detector type and
-    // descriptor type. TODO measurement unit?
+    // descriptor type, in milliseconds.
     map<pair<string, string>, float> detect_extract_time;
     set<string> allFileNames; // Used to save reports
 
@@ -87,7 +86,7 @@ int main(int argc, const char *argv[]) {
         // Loop over all descriptors
         for (auto const &descriptorType: descriptorTypes) {
 
-            // The Akaze detector only works with the Akaze descriptor
+            // The Akaze detector only works with the Akaze descriptor, and vice-versa
             if (detectorType == "AKAZE" && descriptorType != "AKAZE")
                 continue;
             if (descriptorType == "AKAZE" && detectorType != "AKAZE")
@@ -164,11 +163,12 @@ int main(int argc, const char *argv[]) {
 
                 auto elapsed = theTimer.elapsed();
 
+                // Store performance statistics
                 auto detect_descr = make_pair(detectorType, descriptorType);
                 if (detect_extract_time.find(detect_descr) == detect_extract_time.end())
                     detect_extract_time[detect_descr] = elapsed;
                 else
-                    detect_extract_time[detect_descr] += elapsed; // TODO check this works as intended!
+                    detect_extract_time[detect_descr] += elapsed;
 
                 //// EOF STUDENT ASSIGNMENT
 
@@ -191,12 +191,12 @@ int main(int argc, const char *argv[]) {
                 //// EOF STUDENT ASSIGNMENT
 
                 // optional : limit number of keypoints (helpful for debugging and learning)
-                bool bLimitKpts = false; // TODO remember to remove before collecting final output
+                bool bLimitKpts = false; // Remember to remove before collecting final output
                 if (bLimitKpts) {
                     int maxKeypoints = 50;
                     // there is no response info, so keep the first 50 as they are sorted in descending quality order
                     if (detectorType == "SHITOMASI" || detectorType == "HARRIS")
-                        keypoints.erase(keypoints.begin() + maxKeypoints, keypoints.end()); // TODO is this efficient?
+                        keypoints.erase(keypoints.begin() + maxKeypoints, keypoints.end());
                     else
                         cv::KeyPointsFilter::retainBest(keypoints, maxKeypoints);
                     cout << " NOTE: Keypoints have been limited!" << endl;
@@ -243,18 +243,18 @@ int main(int argc, const char *argv[]) {
 
                 //// EOF STUDENT ASSIGNMENT
 
-                // store descriptors for current frame to end of data buffer
+                // Store descriptors for current frame in the data buffer
                 dataBuffer[pos_in_buffer].descriptors = descriptors;
 
+                // Store statistics
                 elapsed = theTimer.elapsed();
-                detect_extract_time[detect_descr] += elapsed; // TODO check this works as intended!
+                detect_extract_time[detect_descr] += elapsed;
 
 
                 cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
 
                 if (imgIndex > 0) // wait until at least two images have been processed
                 {
-
                     /******************************/
                     /* MATCH KEYPOINT DESCRIPTORS */
                     /******************************/
@@ -278,7 +278,7 @@ int main(int argc, const char *argv[]) {
                     if (matched_count.find(detect_descr) == matched_count.end())
                         matched_count[detect_descr] = matches.size();
                     else
-                        matched_count[detect_descr] += matches.size(); // TODO check this actually works as intended!
+                        matched_count[detect_descr] += matches.size();
 
                     cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
 
@@ -297,7 +297,7 @@ int main(int argc, const char *argv[]) {
                         cv::namedWindow(windowName, 7);
                         cv::imshow(windowName, matchImg);
                         cout << "Press key to continue to next image" << endl;
-                        // cv::waitKey(0); // wait for key to be pressed
+                        cv::waitKey(0); // wait for key to be pressed
                     }
                 } // Keypoints matching
             } // Loop over images
@@ -370,7 +370,8 @@ int main(int argc, const char *argv[]) {
     for (const auto &detector_name: detectorTypes) {
         image_detect_file << detector_name << " ";
         for (const auto &descriptor_name: descriptorTypes)
-            image_detect_file << std::round(detect_extract_time[make_pair(detector_name, descriptor_name)]*1000) << " ";
+            image_detect_file << std::round(detect_extract_time[make_pair(detector_name, descriptor_name)] * 1000)
+                              << " ";
         image_detect_file << endl;
     }
     return 0;

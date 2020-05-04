@@ -32,7 +32,6 @@ void matchDescriptors(vector<cv::KeyPoint> &kPtsSource,
             descSource.convertTo(descSource, CV_32F);
         if (descRef.type() != CV_32F)
             descRef.convertTo(descRef, CV_32F);
-        // Taken from OpenCV examples. TODO could I use cv::FlannBasedMatcher instead?
         matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
     } else {
         cerr << "Unsupported matcher type: " << matcherType;
@@ -49,23 +48,19 @@ void matchDescriptors(vector<cv::KeyPoint> &kPtsSource,
         matcher->knnMatch(descSource, descRef, knn_matches, 2);
         // Filter out matches that don't pass the Lowe's ratio test
         const float ratio_thresh = 0.8;
-        for (size_t i = 0; i < knn_matches.size(); i++) {
-            if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance) {
-                matches.push_back(knn_matches[i][0]);
+        for (auto & knn_match: knn_matches) {
+            if (knn_match[0].distance < ratio_thresh * knn_match[1].distance) {
+                matches.push_back(knn_match[0]);
             }
         }
     } else {
         cerr << "Unsupported selector type: " << selectorType << endl;
         exit(-1);
     }
-
 }
 
 // Use one of several types of state-of-art descriptors to uniquely identify keypoints
 void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descriptors, string descriptorType) {
-    // select appropriate descriptor
-    // "BRISK", "BRIEF", "ORB", "FREAK", "AKAZE", "SIFT"
-    // TODO add parameters tuning, especially for != brieks, brief>
     cv::Ptr<cv::DescriptorExtractor> extractor;
     if (descriptorType == "BRISK") {
         int threshold = 30;        // FAST/AGAST detection threshold score.
@@ -141,7 +136,7 @@ void detGoodFeaturesToTrackHelper(vector<cv::KeyPoint> &keypoints,
         string windowName = useHarrisDetector ? "Harris Corner Detector Results" : "Shi-Tomasi Corner Detector Results";
         cv::namedWindow(windowName, 6);
         imshow(windowName, visImage);
-        // cv::waitKey(0);
+        cv::waitKey(0);
     }
 }
 
@@ -185,6 +180,6 @@ void detKeypointsModern(vector<cv::KeyPoint> &keypoints, cv::Mat &img, string de
         string windowName = detectorType + " corner Detector Results";
         cv::namedWindow(windowName, 6);
         imshow(windowName, visImage);
-        // cv::waitKey(0);
+        cv::waitKey(0);
     }
 }

@@ -10,7 +10,6 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/xfeatures2d/nonfree.hpp>
 
-#include <stdio.h>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
