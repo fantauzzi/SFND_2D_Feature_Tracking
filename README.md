@@ -26,19 +26,37 @@ Tested under Ubuntu 16.04 (OpenCV 4.1) and Ubuntu 18.04 (OpenCV 4.3)
 3. Build: `cmake .. && make`
 4. Run it: `./2D_feature_tracking`
 
+Performance statistics are saved in file `stats.txt` in the root of the repo (overwriting the existing file).
+
 ## Performance Evaluation
 
-Performance using different keypoint detectors and their descriptors have been measured, and are reported below. Where applicable, the keypoint matching algorithm used is FLANN, with k-nearest neighbor selection (k=2).
+Performance using different keypoint detectors and keypoint descriptors have been measured, and are reported below. Where applicable, the keypoint matching algorithm used is FLANN, with k-nearest neighbor selection (k=2).
 
 The table below indicates the number of keypoints detected on the preceding vehicle, for each image and for each detector. Shi-Tomasi and Harris detect the fewest, in every image, while Fast detect the most.
 
+![Screenshot](images/table1.png "Table")
+
 The table below lists the average neighborhood size of the keypoints on every image, for the different detectors. The next table lists the sample standard deviation. Shi-Tomasi, Harris and Fast have a fixed neighborhood size for every keypoint, therefore have, across images, the same average and zero sample standard deviation.
 
-The total number of keypoints matched between two consecutive images is in the table below, summed across 9 pairs of consecutive images.
+![Screenshot](images/table2.png "Table")
+
+![Screenshot](images/table3.png "Table")
+
+The total number of keypoints matched between two consecutive images is in the table below, per detector and descriptor, summed across 9 pairs of consecutive images.
+
+![Screenshot](images/table4.png "Table")
 
 This is the total time for keypoints detection and description extraction in milliseconds, summed across the 10 images.
 
+![Screenshot](images/table5.png "Table")
+
 The last table reports the number of matched keypoints between two consecutive images, divided by the time needed for keypoints detection and description extraction.
+
+![Screenshot](images/table6.png "Table")
+
+### Conclusions
+
+The detector/descriptor combinations that extracted the greatest number of salient points per unit of time have been (from the best) FAST/BRIEF, FAST/ORB and FAST/SIFT. Also, FAST/BRIEF and FAST/ORB have had the fastest processing time per frame. Therefore those three combinations are my candidate choice for the purpose of detecting keypoints on vehicles.
 
 ## Rubric Criteria
 
@@ -51,5 +69,5 @@ The last table reports the number of matched keypoints between two consecutive i
 * **MP.6 Descriptor Distance Ratio** -Implemented in `matching2D_Student.cpp`.
 * **MP.7 Performance Evaluation 1** -See previous section, the first three tables.
 * **MP.8 Performance Evaluation 2** -See previous section, the fourth table.
-* **MP.9 Performance Evaluation 3** -See previous section, the last table and conclusions thereafter.
+* **MP.9 Performance Evaluation 3** -See previous section, the last two tables and conclusions thereafter. The [spreadsheet](stats.ods) is in the root of the repo.
  

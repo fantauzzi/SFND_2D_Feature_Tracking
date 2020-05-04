@@ -76,7 +76,8 @@ int main(int argc, const char *argv[]) {
     // Total time (summed across all images) for keypoints detection plus descriptors extraction, by detector type and
     // descriptor type, in milliseconds.
     map<pair<string, string>, float> detect_extract_time;
-    set<string> allFileNames; // Used to save reports
+    set<string> allFileNames; // Used to compile performance reports
+    string stats_file_name = "stats.txt";  // File name to contain the performance report
 
     string matcherType = "MAT_FLANN";        // MAT_BF, MAT_FLANN
     string selectorType = "SEL_KNN";       // SEL_NN, SEL_KNN
@@ -128,7 +129,7 @@ int main(int argc, const char *argv[]) {
                 dataBuffer[pos_in_buffer] = frame;
 
                 //// EOF STUDENT ASSIGNMENT
-                cout << "#1 : LOAD IMAGE INTO BUFFER done" << endl;
+                // cout << "#1 : LOAD IMAGE INTO BUFFER done" << endl;
 
                 /**************************/
                 /* DETECT IMAGE KEYPOINTS */
@@ -157,7 +158,7 @@ int main(int argc, const char *argv[]) {
                 else if (detectorType == "SIFT")
                     detKeypointsModern(keypoints, img, "SIFT", bVis);
                 else {
-                    cout << "Unknown detector type: " << detectorType << endl;
+                    cerr << "Unknown detector type: " << detectorType << endl;
                     exit(-1);
                 }
 
@@ -217,13 +218,11 @@ int main(int argc, const char *argv[]) {
                 });
                 double sample_var = sq_dev / (keypoints.size() - 1.);
 
-                cout << "Average = " << avg << " Sample std dev. = " << std::sqrt(sample_var) << endl;
-
                 // Fill in statistics
                 keypoints_count[make_pair(fileName, detectorType)] = keypoints.size();
                 neighborhood_size[make_pair(fileName, detectorType)] = make_pair(avg, sample_var);
 
-                cout << "#2 : DETECT KEYPOINTS done" << endl;
+                // cout << "#2 : DETECT KEYPOINTS done" << endl;
 
                 /********************************/
                 /* EXTRACT KEYPOINT DESCRIPTORS */
@@ -251,7 +250,7 @@ int main(int argc, const char *argv[]) {
                 detect_extract_time[detect_descr] += elapsed;
 
 
-                cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
+                // cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
 
                 if (imgIndex > 0) // wait until at least two images have been processed
                 {
@@ -280,7 +279,7 @@ int main(int argc, const char *argv[]) {
                     else
                         matched_count[detect_descr] += matches.size();
 
-                    cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
+                    // cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
 
                     // visualize matches between current and previous image
                     if (bVis) {
@@ -301,13 +300,15 @@ int main(int argc, const char *argv[]) {
                     }
                 } // Keypoints matching
             } // Loop over images
+            cout << "." << flush;
         } // Loop over all descriptor types
     } // Loop over all detector types
+    cout << endl;
     // Save statistics in files
 
-    ofstream image_detect_file(dataPath + "stats.txt");
+    ofstream image_detect_file(dataPath + stats_file_name);
     if (!image_detect_file.is_open()) {
-        cout << "Unable to open file for writing" << endl;
+        cerr << "Unable to open file for writing" << endl;
         exit(-1);
     }
 
@@ -374,5 +375,7 @@ int main(int argc, const char *argv[]) {
                               << " ";
         image_detect_file << endl;
     }
+
+    cout << "Statistics saved in file " + stats_file_name << endl;
     return 0;
 }

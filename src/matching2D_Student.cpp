@@ -85,7 +85,7 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
     double t = (double) cv::getTickCount();
     extractor->compute(img, keypoints, descriptors);
     t = ((double) cv::getTickCount() - t) / cv::getTickFrequency();
-    cout << "  " << descriptorType << " descriptor extraction in " << 1000 * t / 1.0 << " ms" << endl;
+    // cout << "  " << descriptorType << " descriptor extraction in " << 1000 * t / 1.0 << " ms" << endl;
 }
 
 
@@ -126,8 +126,7 @@ void detGoodFeaturesToTrackHelper(vector<cv::KeyPoint> &keypoints,
 
     const string which_detection = useHarrisDetector ? "HARRIS" : "SHITOMASI";
     t = (static_cast<double >(cv::getTickCount()) - t) / cv::getTickFrequency();
-    cout << " " << which_detection << " with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms"
-         << endl;
+    // cout << " " << which_detection << " with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
 
     // visualize results
     if (bVis) {
@@ -136,6 +135,7 @@ void detGoodFeaturesToTrackHelper(vector<cv::KeyPoint> &keypoints,
         string windowName = useHarrisDetector ? "Harris Corner Detector Results" : "Shi-Tomasi Corner Detector Results";
         cv::namedWindow(windowName, 6);
         imshow(windowName, visImage);
+        cout << "Press key to continue" << endl;
         cv::waitKey(0);
     }
 }
@@ -169,9 +169,9 @@ void detKeypointsModern(vector<cv::KeyPoint> &keypoints, cv::Mat &img, string de
     detector->detect(img, keypoints);
 
     t = ((double) cv::getTickCount() - t) / cv::getTickFrequency();
-    cout << " " << detectorType << " detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0
-         << " ms"
-         << endl;
+    // cout << " " << detectorType << " detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0
+    //     << " ms"
+    //     << endl;
 
 // visualize results
     if (bViz) {
