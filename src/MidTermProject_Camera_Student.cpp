@@ -7,6 +7,8 @@
 #include <limits>
 #include <numeric>
 #include <algorithm>
+#include <map>
+#include <set>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -18,6 +20,27 @@
 #include "matching2D.hpp"
 
 using namespace std;
+
+class Timer {
+    double startTime = static_cast<double>(cv::getTickCount());
+public:
+    double elapsed() const {
+        double res = (static_cast<double >(cv::getTickCount()) - startTime) / cv::getTickFrequency();
+        return res;
+    }
+
+    void reset() {
+        startTime = static_cast<double>(cv::getTickCount());
+    }
+
+    double fetch_and_restart() {
+        auto savedStart = startTime;
+        reset();
+        double res = (static_cast<double >(cv::getTickCount()) - savedStart) / cv::getTickFrequency();
+        return res;
+    }
+};
+
 
 /* MAIN PROGRAM */
 int main(int argc, const char *argv[]) {
@@ -38,19 +61,33 @@ int main(int argc, const char *argv[]) {
     int imgFillWidth = 4;  // no. of digits which make up the file index (e.g. img-0001.png)
 
     // misc
+    const char dir_separator='/';
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer(dataBufferSize); // sequence of data frames which are held in memory at the same time
     int pos_in_buffer = -1; // Position in the circular buffer, will be increased to 0 at the first iteration
     bool bVis = true;            // visualize results
 
+    vector<string> detectorTypes{"SHITOMASI", "HARRIS", "FAST", "BRISK", "ORB", "AKAZE", "SIFT"};
+    vector<string> descriptorTypes = {"BRISK", "BRIEF", "ORB", "FREAK", "AKAZE", "SIFT"};
+
+    // ---Statistics to be collected and dumped in files
+    // Number of keypoints on the preceding vehicle, by image and by detector
+    map<pair<string, string>, int> keypoints_count;
+    // Average and sample variance of the neighborhood size, by image and by detector
+    map<pair<string, string>, pair<float, float>> neighborhood_size;
+    // Total number of matched keypoints (summed across all images), by detector type and by descriptor type
+    map<pair<string, string>, int> matched_count;
+    // Total time (summed across all images) for keypoints detection plus descriptors extraction, by detector type and
+    // descriptor type. TODO measurement unit?
+    map<pair<string, string>, float> detect_extract_time;
+    set<string> allFileNames; // Used to save reports
+
     string matcherType = "MAT_FLANN";        // MAT_BF, MAT_FLANN
     string selectorType = "SEL_KNN";       // SEL_NN, SEL_KNN
 
     // Loop over all detectors
-    vector<string> detectorTypes{"SHITOMASI", "HARRIS", "FAST", "BRISK", "ORB", "AKAZE", "SIFT"};
     for (auto const &detectorType: detectorTypes) {
         // Loop over all descriptors
-        vector<string> descriptorTypes = {"BRISK", "BRIEF", "ORB", "FREAK", "AKAZE", "SIFT"};
         for (auto const &descriptorType: descriptorTypes) {
 
             // The Akaze detector only works with the Akaze descriptor
@@ -74,6 +111,9 @@ int main(int argc, const char *argv[]) {
                 // assemble filenames for current index
                 ostringstream imgNumber;
                 imgNumber << setfill('0') << setw(imgFillWidth) << imgStartIndex + imgIndex;
+                string fileName = imgPrefix + imgNumber.str() + imgFileType;
+                fileName = fileName.substr(fileName.find_last_of(dir_separator) + 1);
+                allFileNames.insert(fileName);
                 string imgFullFilename = imgBasePath + imgPrefix + imgNumber.str() + imgFileType;
 
                 // load image from file and convert to grayscale
@@ -104,6 +144,8 @@ int main(int argc, const char *argv[]) {
                 //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
                 //// -> HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
 
+                Timer theTimer;
+
                 if (detectorType == "SHITOMASI")
                     detGoodFeaturesToTrack(keypoints, imgGray, bVis);
                 else if (detectorType == "HARRIS")
@@ -122,6 +164,14 @@ int main(int argc, const char *argv[]) {
                     cout << "Unknown detector type: " << detectorType << endl;
                     exit(-1);
                 }
+
+                auto elapsed = theTimer.elapsed();
+
+                auto detect_descr = make_pair(detectorType, descriptorType);
+                if (detect_extract_time.find(detect_descr) == detect_extract_time.end())
+                    detect_extract_time[detect_descr] = elapsed;
+                else
+                    detect_extract_time[detect_descr] += elapsed; // TODO check this works as intended!
 
                 //// EOF STUDENT ASSIGNMENT
 
@@ -144,10 +194,9 @@ int main(int argc, const char *argv[]) {
                 //// EOF STUDENT ASSIGNMENT
 
                 // optional : limit number of keypoints (helpful for debugging and learning)
-                bool bLimitKpts = true; // TODO remember to remove before collecting final output
+                bool bLimitKpts = false; // TODO remember to remove before collecting final output
                 if (bLimitKpts) {
                     int maxKeypoints = 50;
-
                     // there is no response info, so keep the first 50 as they are sorted in descending quality order
                     if (detectorType == "SHITOMASI" || detectorType == "HARRIS")
                         keypoints.erase(keypoints.begin() + maxKeypoints, keypoints.end()); // TODO is this efficient?
@@ -156,22 +205,27 @@ int main(int argc, const char *argv[]) {
                     cout << " NOTE: Keypoints have been limited!" << endl;
                 }
 
+                // Store keypoints for current frame in the data buffer
+                dataBuffer[pos_in_buffer].keypoints = keypoints;
+
                 // Compute average and sample variance of the keypoints neighborhood size
                 double sum = 0;
                 for_each(keypoints.begin(), keypoints.end(), [&sum](cv::KeyPoint kp) { sum += kp.size; });
-                double avg = sum/keypoints.size();
+                double avg = sum / keypoints.size();
 
-                double sq_dev=0;
+                double sq_dev = 0;
                 for_each(keypoints.begin(), keypoints.end(), [avg, &sq_dev](cv::KeyPoint kp) {
                     auto dev = kp.size - avg;
-                    sq_dev+= dev * dev;
+                    sq_dev += dev * dev;
                 });
                 double sample_var = sq_dev / (keypoints.size() - 1.);
 
                 cout << "Average = " << avg << " Sample std dev. = " << std::sqrt(sample_var) << endl;
 
-                // Store keypoints for current frame in the data buffer
-                dataBuffer[pos_in_buffer].keypoints = keypoints;
+                // Fill in statistics
+                keypoints_count[make_pair(fileName, detectorType)] = keypoints.size();
+                neighborhood_size[make_pair(fileName, detectorType)] = make_pair(avg, sample_var);
+
                 cout << "#2 : DETECT KEYPOINTS done" << endl;
 
                 /********************************/
@@ -182,6 +236,7 @@ int main(int argc, const char *argv[]) {
                 //// TASK MP.4 -> add the following descriptors in file matching2D.cpp and enable string-based selection based on descriptorType
                 //// -> BRIEF, ORB, FREAK, AKAZE, SIFT
 
+                theTimer.reset();
                 cv::Mat descriptors;
                 // string descriptorType = "BRISK"; // BRIEF, ORB, FREAK, AKAZE, SIFT
                 descKeypoints(dataBuffer[pos_in_buffer].keypoints,
@@ -189,18 +244,23 @@ int main(int argc, const char *argv[]) {
                               descriptors,
                               descriptorType);
 
-
                 //// EOF STUDENT ASSIGNMENT
 
                 // store descriptors for current frame to end of data buffer
                 dataBuffer[pos_in_buffer].descriptors = descriptors;
+
+                elapsed = theTimer.elapsed();
+                detect_extract_time[detect_descr] += elapsed; // TODO check this works as intended!
+
 
                 cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
 
                 if (imgIndex > 0) // wait until at least two images have been processed
                 {
 
+                    /******************************/
                     /* MATCH KEYPOINT DESCRIPTORS */
+                    /******************************/
 
                     vector<cv::DMatch> matches;
 
@@ -216,6 +276,12 @@ int main(int argc, const char *argv[]) {
 
                     // store matches in current data frame
                     dataBuffer[pos_in_buffer].kptMatches = matches;
+
+                    // auto detect_descr = make_pair(detectorType, descriptorType);
+                    if (matched_count.find(detect_descr) == matched_count.end())
+                        matched_count[detect_descr] = matches.size();
+                    else
+                        matched_count[detect_descr] += matches.size(); // TODO check this actually works as intended!
 
                     cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
 
@@ -240,5 +306,89 @@ int main(int argc, const char *argv[]) {
             } // Loop over images
         } // Loop over all descriptor types
     } // Loop over all detector types
+    // Save statistics in files
+
+    // Number of keypoints on the preceding vehicle, by image and by detector
+    //map<pair<string, string>, int> keypoints_count;
+
+    // Average and sample variance of the neighborhood size, by image and by detector
+    //map<pair<string, string>, pair<float, float>> neighborhood_size;
+
+    // Total number of matched keypoints (summed across all images), by detector type and by descriptor type
+    //map<pair<string, string>, int> matched_count;
+
+    // Total time (summed across all images) for keypoints detection plus descriptors extraction, by detector type and
+    // descriptor type. TODO measurement unit?
+    //map<pair<string, string>, float> detect_extract_time;
+
+    ofstream image_detect_file(dataPath + "stats.txt");
+    if (!image_detect_file.is_open()) {
+        cout << "Unable to open file for writing" << endl;
+        exit(-1);
+    }
+
+    auto write_detectors_header = [&image_detect_file, &detectorTypes]() {
+        for (const auto &detector_name: detectorTypes) {
+            image_detect_file << detector_name << " ";
+        }
+        image_detect_file << endl;
+    };
+
+    image_detect_file << "Number_of_keypoints_on_the_preceding_vehicle,_by_image_and_by_detector" << endl;
+    write_detectors_header();
+    for (const auto &file_name: allFileNames) {
+        image_detect_file << file_name << " ";
+        for (const auto &detector_name: detectorTypes) {
+            image_detect_file << keypoints_count[make_pair(file_name, detector_name)] << " ";
+        }
+        image_detect_file << endl;
+    }
+
+    image_detect_file << "Average_of_the_neighborhood_size,_by_image_and_by_detector" << endl;
+    write_detectors_header();
+    for (const auto &file_name: allFileNames) {
+        image_detect_file << file_name << " ";
+        for (const auto &detector_name: detectorTypes) {
+            image_detect_file << neighborhood_size[make_pair(file_name, detector_name)].first << " ";
+        }
+        image_detect_file << endl;
+    }
+
+    image_detect_file << "Sample_std_dev_of_the_neighborhood_size,_by_image_and_by_detector" << endl;
+    write_detectors_header();
+    for (const auto &file_name: allFileNames) {
+        image_detect_file << file_name << " ";
+        for (const auto &detector_name: detectorTypes)
+            image_detect_file << std::sqrt(neighborhood_size[make_pair(file_name, detector_name)].second) << " ";
+        image_detect_file << endl;
+    }
+
+    auto write_descriptors_header = [&image_detect_file, &descriptorTypes]() {
+        for (const auto &descriptor_name: descriptorTypes)
+            image_detect_file << descriptor_name << " ";
+        image_detect_file << endl;
+    };
+
+    image_detect_file
+            << "Total_number_of_matched_keypoints_(summed_across_all_images),_by_detector_type_and_by_descriptor_type"
+            << endl;
+    write_descriptors_header();
+    for (const auto &detector_name: detectorTypes) {
+        image_detect_file << detector_name << " ";
+        for (const auto &descriptor_name: descriptorTypes)
+            image_detect_file << matched_count[make_pair(detector_name, descriptor_name)] << " ";
+        image_detect_file << endl;
+    }
+
+    image_detect_file
+            << "Total_time_(summed_across_all_images)_for_keypoints_detection_plus_descriptors_extraction,_by_detector_type_and_descriptor_type"
+            << endl;
+    write_descriptors_header();
+    for (const auto &detector_name: detectorTypes) {
+        image_detect_file << detector_name << " ";
+        for (const auto &descriptor_name: descriptorTypes)
+            image_detect_file << detect_extract_time[make_pair(detector_name, descriptor_name)] << " ";
+        image_detect_file << endl;
+    }
     return 0;
 }
